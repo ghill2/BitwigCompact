@@ -1,0 +1,14 @@
+{
+  "_comment": "From the old notes. NOTE: direct parameter access is designed for plugins (VST3/CLAP); Bitwig built-in devices like Compressor may not report direct parameters - verify, otherwise use plugins.",
+  "match": ["Compressor"],
+  "knobs": {
+    "1": "Threshold",
+    "2": "Ratio",
+    "3": "Attack",
+    "4": "Release",
+    "5": "Makeup",
+    "6": "Mix",
+    "7": "Lookahead",
+    "8": "Sidechain"
+  }
+}

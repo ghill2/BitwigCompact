@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+
+   <parent>
+      <groupId>com.me</groupId>
+      <artifactId>controllerbitwig-parent</artifactId>
+      <version>0.2</version>
+   </parent>
+
+   <artifactId>console-compact-extension</artifactId>
+   <name>Console Compact Extension</name>
+   <description>Bitwig controller extension that hosts the shell and wires it to the Bitwig Controller API.</description>
+
+   <repositories>
+      <repository>
+         <id>bitwig</id>
+         <name>Bitwig Maven Repository</name>
+         <url>https://maven.bitwig.com</url>
+      </repository>
+   </repositories>
+
+   <dependencies>
+      <dependency>
+         <groupId>com.me</groupId>
+         <artifactId>console-compact-shell</artifactId>
+         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+         <!-- provided: Bitwig supplies its own API classes at runtime -->
+         <groupId>com.bitwig</groupId>
+         <artifactId>extension-api</artifactId>
+         <version>25</version>
+         <scope>provided</scope>
+      </dependency>
+   </dependencies>
+
+   <build>
+      <plugins>
+         <!-- Shade shell + gson into a single self-contained .bwextension -->
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <executions>
+               <execution>
+                  <phase>package</phase>
+                  <goals>
+                     <goal>shade</goal>
+                  </goals>
+                  <configuration>
+                     <finalName>ControllerBitwig</finalName>
+                     <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                     </transformers>
+                     <filters>
+                        <filter>
+                           <artifact>*:*</artifact>
+                           <excludes>
+                              <exclude>META-INF/*.SF</exclude>
+                              <exclude>META-INF/*.DSA</exclude>
+                              <exclude>META-INF/*.RSA</exclude>
+                              <exclude>module-info.class</exclude>
+                              <exclude>META-INF/versions/**/module-info.class</exclude>
+                           </excludes>
+                        </filter>
+                     </filters>
+                  </configuration>
+               </execution>
+            </executions>
+         </plugin>
+
+         <!-- Install the shaded jar as a Bitwig extension -->
+         <plugin>
+            <groupId>com.coderplus.maven.plugins</groupId>
+            <artifactId>copy-rename-maven-plugin</artifactId>
+            <version>1.0</version>
+            <executions>
+               <execution>
+                  <id>install-bwextension</id>
+                  <phase>install</phase>
+                  <goals>
+                     <goal>copy</goal>
+                  </goals>
+                  <configuration>
+                     <sourceFile>${project.build.directory}/ControllerBitwig.jar</sourceFile>
+                     <destinationFile>${user.home}/Documents/Bitwig Studio/Extensions/ControllerBitwig.bwextension</destinationFile>
+                  </configuration>
+               </execution>
+            </executions>
+         </plugin>
+      </plugins>
+   </build>
+</project>

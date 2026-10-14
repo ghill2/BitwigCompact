@@ -1,0 +1,9 @@
+{
+  "_comment": "Copy this file to <DeviceName>.json for each VST3. 'match' entries are case-insensitive exact names, or prefixes of the device name as Bitwig reports it. Knob ids (1-12) refer to console-compact.json. Parameter names must match what Bitwig reports (select the device once, then read config/last-device-params.txt). A knob value is either a plain parameter name (full range) or an object with 'param' and an optional 'range': [value at CC 0, value at CC 127] - e.g. [0, 0.5] maps the knob's full travel to the first half of the parameter, [1, 0] inverts it.",
+  "match": ["REPLACE_WITH_DEVICE_NAME"],
+  "knobs": {
+    "1": "Parameter Name As Shown In Bitwig",
+    "2": { "param": "Another Parameter", "range": [0.0, 0.5] },
+    "3": "..."
+  }
+}

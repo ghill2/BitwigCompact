@@ -1,0 +1,18 @@
+{
+  "_comment": "FabFilter Pro-L 2 - names verified via config/last-device-params.txt dump (direct parameters only; Style/Threshold/Linear Phase/Oversampling are not exposed by the plugin). Knobs 6/7 use range scaling: full knob travel covers the useful first half of the link parameters. Knobs 10-12 are toggles: the knob jumps between off/on across its range. Channel Link Center/LFE and Receive Midi are left unmapped deliberately.",
+  "match": ["Pro-L 2"],
+  "knobs": {
+    "1": "Gain",
+    "2": "Output Level",
+    "3": "Lookahead",
+    "4": "Attack",
+    "5": "Release",
+    "6": { "param": "Channel Link Transients", "range": [0.0, 0.5] },
+    "7": { "param": "Channel Link Release", "range": [0.0, 0.5] },
+    "8": "Dithering",
+    "9": "Noise Shaping",
+    "10": "Filter DC Offset",
+    "11": "Side Chain Triggering",
+    "12": "Bypass"
+  }
+}

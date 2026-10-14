@@ -1,0 +1,31 @@
+#!/bin/bash
+# Console Compact Monitor launcher: runs the newest monitor jar from this repository.
+# The app lives at <repo>/Console Compact Monitor.app/Contents/MacOS/, so the repo root
+# is three levels up. Rebuilds via ./build.sh are picked up automatically.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+
+# Find the newest monitor fat jar.
+JAR=""
+NEWEST=0
+for candidate in "$REPO"/monitor/target/console-compact-monitor-*.jar; do
+	[ -e "$candidate" ] || continue
+	MOD="$(stat -f %m "$candidate" 2>/dev/null || echo 0)"
+	if [ "$MOD" -gt "$NEWEST" ]; then
+		NEWEST="$MOD"
+		JAR="$candidate"
+	fi
+done
+
+JAVA="/opt/homebrew/opt/openjdk/bin/java"
+if [ ! -x "$JAVA" ]; then
+	JAVA="$(command -v java || true)"
+fi
+
+if [ -z "$JAR" ] || [ -z "$JAVA" ]; then
+	osascript -e 'display notification "Run ./build.sh in the ControllerBitwig repo first" with title "Console Compact Monitor"' >/dev/null 2>&1
+	exit 1
+fi
+
+exec "$JAVA" -jar "$JAR"
