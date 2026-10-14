@@ -24,7 +24,7 @@ if [ ! -x "$JAVA" ]; then
 fi
 
 if [ -z "$JAR" ] || [ -z "$JAVA" ]; then
-	osascript -e 'display notification "Run ./build.sh in the ControllerBitwig repo first" with title "Console Compact Monitor"' >/dev/null 2>&1
+	osascript -e 'display notification "Run ./build.sh in the Bitwig Compact repo first" with title "Console Compact Monitor"' >/dev/null 2>&1
 	exit 1
 fi
 

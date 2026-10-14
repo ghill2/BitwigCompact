@@ -1,4 +1,4 @@
-# ControllerBitwig
+# Bitwig Compact
 
 A mapping system for using the **Softube Console 1 Compact** with Bitwig Studio. It turns the
 console's 12 equalizer-section knobs into a control surface for **any Bitwig device — native
