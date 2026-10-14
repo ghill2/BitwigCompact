@@ -43,7 +43,7 @@ Out (`ShellOutput`): `sendMidi(status, d1, d2)` (CC → knob displays), `setPara
 
 1. Copy **`BitwigCompact.bwextension`** (repository root) to
    `~/Documents/Bitwig Studio/Extensions/` — create the folder if it doesn't exist.
-2. Restart Bitwig → Settings → Controllers → Add Controller → *George Hill / MyController*,
+2. Restart Bitwig → Settings → Controllers → Add Controller → *George Hill / BitwigCompact*,
    set input/output to the Console Compact's MIDI ports.
 3. Copy the default maps into your config folder:
    `cp -R maps/. "$HOME/Documents/Bitwig Studio/BitwigCompact/"`
@@ -53,7 +53,7 @@ Bitwig's Extensions folder and refreshes the exported copy in the repository roo
 
 ## Settings
 
-The controller exposes one setting in Bitwig (Settings → Controllers → MyController):
+The controller exposes one setting in Bitwig (Settings → Controllers → BitwigCompact):
 
 - **Config folder** — the folder the extension reads maps from and writes
   `last-device-params.txt` to. Changing it rebuilds the mapping immediately (the current
@@ -157,7 +157,7 @@ java -jar shell/target/console-compact-shell-*-standalone.jar --simulate --confi
 
 ## In Bitwig
 
-Settings → Controllers → Add Controller → *George Hill / MyController*,
+Settings → Controllers → Add Controller → *George Hill / BitwigCompact*,
 set input/output to the Console Compact's MIDI ports. Log output: Controllers → Show Log.
 
 ## Known caveats

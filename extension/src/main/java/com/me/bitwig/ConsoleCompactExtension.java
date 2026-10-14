@@ -118,7 +118,7 @@ public final class ConsoleCompactExtension extends ControllerExtension
       this.cursorDevice.name().markInterested();
       this.cursorDevice.name().addValueObserver(this::onDeviceName);
 
-      this.host.showPopupNotification("MyController Initialized");
+      this.host.showPopupNotification("BitwigCompact Initialized");
    }
 
    private void onConfigFolderChanged(final String folder)
@@ -206,7 +206,7 @@ public final class ConsoleCompactExtension extends ControllerExtension
       }
       if (this.host != null)
       {
-         this.host.showPopupNotification("MyController Exited");
+         this.host.showPopupNotification("BitwigCompact Exited");
       }
    }
 

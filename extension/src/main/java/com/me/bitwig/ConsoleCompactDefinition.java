@@ -22,7 +22,7 @@ public final class ConsoleCompactDefinition extends ControllerExtensionDefinitio
    @Override
    public String getName()
    {
-      return "MyController";
+      return "BitwigCompact";
    }
 
    @Override
