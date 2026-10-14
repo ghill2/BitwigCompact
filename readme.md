@@ -2,7 +2,7 @@
 
 A mapping system for using the **Softube Console 1 Compact** with Bitwig Studio. It turns the
 console's 12 equalizer-section knobs into a control surface for **any Bitwig device — native
-devices and VST3 plugins, including Softube's own Console 1 channel strip VST3**.
+devices and VST3 plugins**.
 
 Each knob targets a plugin parameter **by name** through Bitwig's Controller Scripting API
 (Java extension API with direct-parameter access). Mappings live in one JSON file per plugin:
@@ -10,6 +10,12 @@ select a device in Bitwig and the knob position displays snap to the plugin's cu
 turn a knob and the mapped parameter moves. Extras: per-knob range scaling, a parameter-name
 dump for authoring configs, and an always-on-top monitor window showing every knob, its
 parameter and live position.
+
+## Requirement
+
+The **Softube Console 1 channel strip VST3 must be present on every track** you want to
+control — the console's integration is tied to it, and tracks without the channel strip won't
+respond to the knobs.
 
 ## Hardware setup
 
@@ -26,7 +32,6 @@ The CC numbers never change afterwards.
 | `monitor/` | Always-on-top window app (UDP-fed) showing knobs, parameters and live positions |
 | `config/` | `console-compact.json` (hardware: channel + fixed CCs) and `devices/*.json` (per-plugin knob → parameter mappings) |
 | `Console Compact Monitor.app` | Double-clickable macOS launcher for the monitor window |
-| `archive/` | Previous extension sources, kept for reference |
 
 ## Events (the shell's contract)
 
@@ -60,6 +65,29 @@ instead of plain `java` in the commands below.
 3. Runtime config dir (default `~/Documents/Bitwig Studio/ControllerBitwig`) can be overridden
    with the system property `consolecompact.config.dir`.
 
+## Example device config
+
+`config/devices/Pro-L 2.json` (abbreviated) — plain names map the knob's full travel to the
+parameter's full range; the object form scales the travel to a sub-range:
+
+```json
+{
+  "match": ["Pro-L 2"],
+  "knobs": {
+    "1": "Gain",
+    "2": "Output Level",
+    "3": "Lookahead",
+    "4": "Attack",
+    "5": "Release",
+    "6": { "param": "Channel Link Transients", "range": [0.0, 0.5] },
+    "7": { "param": "Channel Link Release", "range": [0.0, 0.5] },
+    "12": "Bypass"
+  }
+}
+```
+
+Parameter names come straight from the parameter dump (below) — no guessing.
+
 ## Parameter dump (config authoring)
 
 Selecting a device in Bitwig writes `last-device-params.txt` into the config directory
@@ -73,6 +101,8 @@ plugin, in plugin order, with current values and ids. Use it to fill in `devices
 An always-on-top window showing the 12 knobs, their mapped parameter names, live values and a
 drawn dial per knob. It listens on UDP localhost:51234 and is fed by both the Bitwig extension
 and the simulator.
+
+![Monitor window showing the Pro-L 2 mapping](doc/monitor-prol2.png)
 
 **One-click:** double-click **`Console Compact Monitor.app`** in the repository root (Finder),
 or drag it into the Dock. It launches the newest built jar automatically; if the jar is missing

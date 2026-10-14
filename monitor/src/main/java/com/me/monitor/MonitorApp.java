@@ -5,14 +5,19 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.WindowConstants;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Robot;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import javax.imageio.ImageIO;
 
 /**
  * The Console Compact monitor window: always on top, shows the 12 knobs with their mapped
@@ -30,6 +35,10 @@ public final class MonitorApp
    private final JLabel    mapLabel    = new JLabel("", JLabel.CENTER);
    private final MonitorListener listener;
 
+   private JFrame   frame;
+   private File     screenshotFile;
+   private boolean  captureScheduled;
+
    private MonitorApp(final int port) throws Exception
    {
       for (int i = 0; i < this.cells.length; i++)
@@ -42,10 +51,10 @@ public final class MonitorApp
 
    private void show()
    {
-      final JFrame frame = new JFrame("Console Compact Monitor");
-      frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-      frame.setAlwaysOnTop(true);
-      frame.setBackground(BACKGROUND);
+      this.frame = new JFrame("Console Compact Monitor");
+      this.frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+      this.frame.setAlwaysOnTop(true);
+      this.frame.setBackground(BACKGROUND);
 
       this.deviceLabel.setFont(this.deviceLabel.getFont().deriveFont(Font.BOLD, 16f));
       this.deviceLabel.setForeground(new Color(0xE0E0E0));
@@ -67,15 +76,15 @@ public final class MonitorApp
          grid.add(cell);
       }
 
-      frame.getContentPane().setLayout(new BorderLayout());
-      frame.getContentPane().setBackground(BACKGROUND);
-      frame.getContentPane().add(header, BorderLayout.NORTH);
-      frame.getContentPane().add(grid, BorderLayout.CENTER);
+      this.frame.getContentPane().setLayout(new BorderLayout());
+      this.frame.getContentPane().setBackground(BACKGROUND);
+      this.frame.getContentPane().add(header, BorderLayout.NORTH);
+      this.frame.getContentPane().add(grid, BorderLayout.CENTER);
 
-      frame.pack();
-      frame.setLocationByPlatform(true);
+      this.frame.pack();
+      this.frame.setLocationByPlatform(true);
 
-      frame.addWindowListener(new WindowAdapter()
+      this.frame.addWindowListener(new WindowAdapter()
       {
          @Override
          public void windowClosing(final WindowEvent e)
@@ -93,7 +102,7 @@ public final class MonitorApp
          this.deviceLabel.setText("cannot listen on port: " + e.getMessage());
       }
 
-      frame.setVisible(true);
+      this.frame.setVisible(true);
    }
 
    private void handle(final Protocol.Message message)
@@ -112,6 +121,10 @@ public final class MonitorApp
                }
             }
          }
+         if (this.screenshotFile != null)
+         {
+            captureScreenshotLater();
+         }
       }
       else if ("knob".equals(message.type) && message.id >= 1 && message.id <= this.cells.length)
       {
@@ -119,13 +132,55 @@ public final class MonitorApp
       }
    }
 
+   /** Dev aid for the readme screenshot (--screenshot <file>): once the snapshot has rendered,
+    *  capture the window via Robot and exit. */
+   private void captureScreenshotLater()
+   {
+      if (this.captureScheduled)
+      {
+         return;
+      }
+      this.captureScheduled = true;
+      final Timer timer = new Timer(1200, event -> {
+         try
+         {
+            final BufferedImage image = new Robot().createScreenCapture(this.frame.getBounds());
+            ImageIO.write(image, "png", this.screenshotFile);
+            System.out.println("screenshot written: " + this.screenshotFile.getAbsolutePath());
+         }
+         catch (final Exception ex)
+         {
+            System.err.println("screenshot failed: " + ex.getMessage());
+         }
+         System.exit(0);
+      });
+      timer.setRepeats(false);
+      timer.start();
+   }
+
    public static void main(final String[] args)
    {
-      final int port = args.length > 0 ? parsePort(args[0]) : 51234;
+      int port = 51234;
+      File screenshot = null;
+      for (int i = 0; i < args.length; i++)
+      {
+         if ("--screenshot".equals(args[i]) && i + 1 < args.length)
+         {
+            screenshot = new File(args[++i]);
+         }
+         else
+         {
+            port = parsePort(args[i]);
+         }
+      }
+      final int resolvedPort = port;
+      final File shot = screenshot;
       SwingUtilities.invokeLater(() -> {
          try
          {
-            new MonitorApp(port).show();
+            final MonitorApp app = new MonitorApp(resolvedPort);
+            app.screenshotFile = shot;
+            app.show();
          }
          catch (final Exception e)
          {
