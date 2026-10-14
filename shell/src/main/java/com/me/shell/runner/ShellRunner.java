@@ -1,6 +1,7 @@
 package com.me.shell.runner;
 
 import com.me.shell.ConsoleCompactShell;
+import com.me.shell.DefaultConfigDir;
 import com.me.shell.ShellOutput;
 import com.me.shell.monitor.UdpStatusBroadcaster;
 
@@ -88,7 +89,7 @@ public final class ShellRunner
             return Paths.get(args[i + 1]);
          }
       }
-      return Paths.get(System.getProperty("user.home"), "Documents", "Bitwig Studio", "ControllerBitwig");
+      return DefaultConfigDir.resolve();
    }
 
    private static void listPorts() throws MidiUnavailableException

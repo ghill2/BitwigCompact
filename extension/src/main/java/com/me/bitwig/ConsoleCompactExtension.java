@@ -6,7 +6,9 @@ import com.bitwig.extension.controller.api.CursorTrack;
 import com.bitwig.extension.controller.api.MidiIn;
 import com.bitwig.extension.controller.api.MidiOut;
 import com.bitwig.extension.controller.api.PinnableCursorDevice;
+import com.bitwig.extension.controller.api.SettableStringValue;
 import com.me.shell.ConsoleCompactShell;
+import com.me.shell.DefaultConfigDir;
 import com.me.shell.ShellOutput;
 import com.me.shell.monitor.UdpStatusBroadcaster;
 
@@ -52,6 +54,8 @@ public final class ConsoleCompactExtension extends ControllerExtension
    private ConsoleCompactShell   shell;
    private boolean               debug;
    private UdpStatusBroadcaster  monitor;
+   private Path                  configDir;
+   private String                lastDeviceName = "";
 
    /** Direct-parameter resolution state; keys are parameter ids/names exactly as Bitwig reports them. */
    private final Map<String, String> nameToId       = new HashMap<>();
@@ -88,20 +92,22 @@ public final class ConsoleCompactExtension extends ControllerExtension
       this.cursorTrack = this.host.createCursorTrack(0, 0);
       this.cursorDevice = this.cursorTrack.createCursorDevice();
 
-      // The shell must exist before observers fire into it.
-      this.shell = new ConsoleCompactShell(configDir(), new ExtensionShellOutput());
       this.debug = Boolean.parseBoolean(System.getProperty("consolecompact.debug", "true"));
-      this.shell.setDebug(this.debug);
-      log("config dir: " + configDir());
-      final boolean ready = this.shell.start();
-      if (!ready)
-      {
-         log("shell could not start; check the config directory: " + configDir());
-      }
 
       // Broadcast shell state to the monitor window (localhost UDP; no-op when nothing listens).
       this.monitor = new UdpStatusBroadcaster();
-      this.shell.setMonitor(this.monitor);
+
+      // "Config folder" setting in Bitwig's controller preferences. Changing it rebuilds the
+      // shell against the new folder immediately (the current device selection is re-applied).
+      final SettableStringValue configFolder = this.host.getPreferences() //
+         .getStringSetting("Config folder", "Bitwig Compact", 160, defaultConfigDir().toString());
+      configFolder.markInterested();
+      configFolder.addValueObserver(this::onConfigFolderChanged);
+      if (this.shell == null)
+      {
+         // Safety net in case the observer does not fire on registration.
+         createShell(defaultConfigDir());
+      }
 
       // Direct parameter access (per-plugin parameters, by name). See the official Komplete Kontrol
       // extension's DirectParameterControl for the reference usage of these calls.
@@ -113,6 +119,76 @@ public final class ConsoleCompactExtension extends ControllerExtension
       this.cursorDevice.name().addValueObserver(this::onDeviceName);
 
       this.host.showPopupNotification("MyController Initialized");
+   }
+
+   private void onConfigFolderChanged(final String folder)
+   {
+      if (folder == null || folder.isBlank())
+      {
+         return;
+      }
+      final Path path = Paths.get(folder.trim());
+      if (path.equals(this.configDir))
+      {
+         return;
+      }
+      createShell(path);
+   }
+
+   /** (Re)builds the shell against a config folder and re-applies the current device selection. */
+   private void createShell(final Path folder)
+   {
+      this.configDir = folder;
+      log("config folder: " + folder);
+      this.shell = new ConsoleCompactShell(folder, new ExtensionShellOutput());
+      this.shell.setDebug(this.debug);
+      this.shell.setMonitor(this.monitor);
+      if (!this.shell.start())
+      {
+         log("shell could not start; check the config folder: " + folder);
+      }
+      if (this.lastDeviceName != null && !this.lastDeviceName.isBlank())
+      {
+         this.shell.deviceSelected(this.lastDeviceName);
+      }
+   }
+
+   /**
+    * Default config folder: the consolecompact.config.dir system property, then this
+    * checkout's maps/ folder (embedded at build time by build.sh; only used when it exists,
+    * i.e. on the build machine), then the Bitwig user directory.
+    */
+   private static Path defaultConfigDir()
+   {
+      final String override = System.getProperty(DefaultConfigDir.PROPERTY);
+      if (override != null && !override.isBlank())
+      {
+         return Paths.get(override);
+      }
+      final String embedded = readEmbeddedMapsDir();
+      if (embedded != null && Files.isDirectory(Paths.get(embedded)))
+      {
+         return Paths.get(embedded);
+      }
+      return DefaultConfigDir.bitwigUserDir();
+   }
+
+   private static String readEmbeddedMapsDir()
+   {
+      try (java.io.InputStream in = ConsoleCompactExtension.class.getResourceAsStream("/com/me/bitwig/repo.properties"))
+      {
+         if (in == null)
+         {
+            return null;
+         }
+         final java.util.Properties props = new java.util.Properties();
+         props.load(in);
+         return props.getProperty("maps.dir");
+      }
+      catch (final java.io.IOException e)
+      {
+         return null;
+      }
    }
 
    @Override
@@ -134,28 +210,18 @@ public final class ConsoleCompactExtension extends ControllerExtension
       }
    }
 
-   private static Path configDir()
-   {
-      final String override = System.getProperty("consolecompact.config.dir");
-      if (override != null && !override.isBlank())
-      {
-         return Paths.get(override);
-      }
-      return Paths.get(System.getProperty("user.home"), "Documents", "Bitwig Studio", "ControllerBitwig");
-   }
-
    /**
-    * Where last-device-params.txt is written. Defaults to the config directory;
-    * override with -Dconsolecompact.dump.dir (e.g. to point at a repository checkout).
+    * Where last-device-params.txt is written. Defaults to the active config folder;
+    * override with -Dconsolecompact.dump.dir.
     */
-   private static Path dumpDir()
+   private Path dumpDir()
    {
       final String override = System.getProperty("consolecompact.dump.dir");
       if (override != null && !override.isBlank())
       {
          return Paths.get(override);
       }
-      return configDir();
+      return this.configDir;
    }
 
    private void onMidiIn(final int status, final int data1, final int data2)
@@ -169,7 +235,8 @@ public final class ConsoleCompactExtension extends ControllerExtension
    private void onDeviceName(final String name)
    {
       log("device name observed: '" + name + "'");
-      this.dumpDevice = name == null ? "" : name.trim();
+      this.lastDeviceName = name == null ? "" : name.trim();
+      this.dumpDevice = this.lastDeviceName;
       resetDump();
       if (this.shell != null)
       {

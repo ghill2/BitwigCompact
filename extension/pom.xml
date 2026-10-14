@@ -49,7 +49,7 @@
                      <goal>shade</goal>
                   </goals>
                   <configuration>
-                     <finalName>ControllerBitwig</finalName>
+                     <finalName>BitwigCompact</finalName>
                      <transformers>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
                      </transformers>
@@ -83,8 +83,8 @@
                      <goal>copy</goal>
                   </goals>
                   <configuration>
-                     <sourceFile>${project.build.directory}/ControllerBitwig.jar</sourceFile>
-                     <destinationFile>${user.home}/Documents/Bitwig Studio/Extensions/ControllerBitwig.bwextension</destinationFile>
+                     <sourceFile>${project.build.directory}/BitwigCompact.jar</sourceFile>
+                     <destinationFile>${user.home}/Documents/Bitwig Studio/Extensions/BitwigCompact.bwextension</destinationFile>
                   </configuration>
                </execution>
             </executions>

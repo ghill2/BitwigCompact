@@ -20,7 +20,7 @@ respond to the knobs.
 ## Hardware setup
 
 In the Softube Console 1 app, set the **Equalizer section to CC 0–25**. The 12 knobs then send
-fixed MIDI CCs (configured in `config/console-compact.json`, currently CC 0–11 on channel 1).
+fixed MIDI CCs (configured in `maps/console-compact.json`, currently CC 0–11 on channel 1).
 The CC numbers never change afterwards.
 
 ## Layout
@@ -30,7 +30,8 @@ The CC numbers never change afterwards.
 | `shell/` | Pure-Java core (**no Bitwig dependencies**): event model, JSON config, mapping logic with range scaling, CLI test harness |
 | `extension/` | The `.bwextension` Bitwig loads; thin adapter hosting the shell inside Bitwig's Controller API |
 | `monitor/` | Always-on-top window app (UDP-fed) showing knobs, parameters and live positions |
-| `config/` | `console-compact.json` (hardware: channel + fixed CCs) and `devices/*.json` (per-plugin knob → parameter mappings) |
+| `maps/` | Default maps: `console-compact.json` (hardware: channel + fixed CCs) and `devices/*.json` (per-plugin knob → parameter mappings) |
+| `BitwigCompact.bwextension` | Prebuilt extension, ready to copy into Bitwig (see Installation) |
 | `Console Compact Monitor.app` | Double-clickable macOS launcher for the monitor window |
 
 ## Events (the shell's contract)
@@ -38,12 +39,37 @@ The CC numbers never change afterwards.
 In (`ShellInput`): `deviceSelected(name)`, `parameterValueChanged(name, normalized)`, `midiReceived(status, d1, d2)`
 Out (`ShellOutput`): `sendMidi(status, d1, d2)` (CC → knob displays), `setParameter(name, normalized)`, `log(msg)`
 
+## Installation
+
+1. Copy **`BitwigCompact.bwextension`** (repository root) to
+   `~/Documents/Bitwig Studio/Extensions/` — create the folder if it doesn't exist.
+2. Restart Bitwig → Settings → Controllers → Add Controller → *George Hill / MyController*,
+   set input/output to the Console Compact's MIDI ports.
+3. Copy the default maps into your config folder:
+   `cp -R maps/. "$HOME/Documents/Bitwig Studio/BitwigCompact/"`
+
+Or build from source with `./build.sh` (runs the tests, installs the extension into
+Bitwig's Extensions folder and refreshes the exported copy in the repository root).
+
+## Settings
+
+The controller exposes one setting in Bitwig (Settings → Controllers → MyController):
+
+- **Config folder** — the folder the extension reads maps from and writes
+  `last-device-params.txt` to. Changing it rebuilds the mapping immediately (the current
+  device selection is re-applied, no restart needed).
+
+Default: on the machine where the extension was built, the repository's `maps/` folder
+(its path is embedded at build time and only used when it exists); everywhere else
+`~/Documents/Bitwig Studio/BitwigCompact`. The `consolecompact.config.dir` system property
+overrides the default.
+
 ## Build & install
 
 ```bash
 ./build.sh          # = JAVA_HOME=/opt/homebrew/opt/openjdk mvn clean install
-                    # runs tests, then copies ControllerBitwig.bwextension into
-                    # ~/Documents/Bitwig Studio/Extensions/
+                    # runs tests, then copies BitwigCompact.bwextension into
+                    # ~/Documents/Bitwig Studio/Extensions/ and the repository root
 ```
 
 Note: Java is not on the default PATH on this machine — either
@@ -54,20 +80,21 @@ instead of plain `java` in the commands below.
 
 1. Hardware CCs: with the Softube app's Equalizer section set to CC 0–25, verify the CCs your
    knobs actually send with `java -jar shell/target/console-compact-shell-*-standalone.jar
-   --hardware "Console"` (or `--list-ports`), then adjust `config/console-compact.json` if
-   needed → copy to `~/Documents/Bitwig Studio/ControllerBitwig/`.
-2. Per plugin: copy `config/devices/_template.json` to `<DeviceName>.json`, list the parameter
+   --hardware "Console"` (or `--list-ports`), then adjust `maps/console-compact.json` if
+   needed.
+2. Per plugin: copy `maps/devices/_template.json` to `<DeviceName>.json`, list the parameter
    names exactly as Bitwig reports them (select the device once, then read the parameter dump,
    below). A knob can be a plain name (full 0–1 range) or `{"param": "Name", "range": [a, b]}`
    where `a`/`b` are the parameter values at CC 0 / CC 127 — e.g. `[0, 0.5]` spreads the knob's
    full travel over the first half of the parameter, `[1, 0]` inverts the knob.
    Configs are re-read on every device selection — no Bitwig restart needed.
-3. Runtime config dir (default `~/Documents/Bitwig Studio/ControllerBitwig`) can be overridden
-   with the system property `consolecompact.config.dir`.
+3. The config folder is a controller setting (see Settings); maps live in `maps/` in the
+   repository by default on the build machine, or `~/Documents/Bitwig Studio/BitwigCompact`
+   elsewhere.
 
 ## Example device config
 
-`config/devices/Pro-L 2.json` (abbreviated) — plain names map the knob's full travel to the
+`maps/devices/Pro-L 2.json` (abbreviated) — plain names map the knob's full travel to the
 parameter's full range; the object form scales the travel to a sub-range:
 
 ```json
@@ -90,11 +117,11 @@ Parameter names come straight from the parameter dump (below) — no guessing.
 
 ## Parameter dump (config authoring)
 
-Selecting a device in Bitwig writes `last-device-params.txt` into the config directory
-(`~/Documents/Bitwig Studio/ControllerBitwig` by default): every parameter of the selected
-plugin, in plugin order, with current values and ids. Use it to fill in `devices/*.json`
-(re-select the device afterwards to hot-reload). Override the location with
-`-Dconsolecompact.dump.dir=<path>` — e.g. to write it into a repository checkout.
+Selecting a device in Bitwig writes `last-device-params.txt` into the active config folder
+(the repository's `maps/` on the build machine, `~/Documents/Bitwig Studio/BitwigCompact`
+elsewhere): every parameter of the selected plugin, in plugin order, with current values and
+ids. Use it to fill in `devices/*.json` (re-select the device afterwards to hot-reload).
+Override the location with `-Dconsolecompact.dump.dir=<path>`.
 
 ## Monitor window
 
@@ -120,11 +147,13 @@ the port; the shell side broadcasts to `-Dconsolecompact.monitor.port` (0 disabl
 ## Test without Bitwig / hardware
 
 ```bash
-java -jar shell/target/console-compact-shell-*-standalone.jar --simulate --config config
+java -jar shell/target/console-compact-shell-*-standalone.jar --simulate --config maps
 > device FabFilter Pro-L 2
 > cc 0 100          # pretend knob 1 (CC 0) turned
 > value Release 0.5 # pretend Bitwig reported a value
 ```
+
+(From the repository root, `--config maps` is the default and can be omitted.)
 
 ## In Bitwig
 
